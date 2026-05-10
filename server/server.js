@@ -6,7 +6,7 @@ import OpenAI from "openai";
 dotenv.config();
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 const SYSTEM_PROMPT =
   "You are a helpful AI support assistant for a tech startup. Be concise and friendly.";
 const GROQ_BASE_URL = process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1";
@@ -19,10 +19,20 @@ const rateLimitStore = new Map();
 app.use(cors());
 app.use(express.json({ limit: "32kb" }));
 
-const groq = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY,
-  baseURL: GROQ_BASE_URL,
+app.get("/", (req, res) => {
+  res.json({ ok: true, service: "AI Support Assistant API" });
 });
+
+app.get(["/favicon.ico", "/favicon.png"], (req, res) => {
+  res.status(204).end();
+});
+
+function createGroqClient() {
+  return new OpenAI({
+    apiKey: process.env.GROQ_API_KEY,
+    baseURL: GROQ_BASE_URL,
+  });
+}
 
 function formatHistory(history = []) {
   // Groq uses the OpenAI-compatible role/content message format.
@@ -105,7 +115,8 @@ app.post("/chat", rateLimit, async (req, res) => {
 
     if (!process.env.GROQ_API_KEY) {
       return res.status(500).json({
-        error: "Missing GROQ_API_KEY. Add it to server/.env and restart the server.",
+        error:
+          "Missing GROQ_API_KEY. Add it to your Vercel environment variables.",
       });
     }
 
@@ -123,7 +134,7 @@ app.post("/chat", rateLimit, async (req, res) => {
       return res.status(400).json({ error: "History must be an array." });
     }
 
-    const completion = await groq.chat.completions.create({
+    const completion = await createGroqClient().chat.completions.create({
       model: GROQ_MODEL,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
@@ -152,6 +163,10 @@ app.post("/chat", rateLimit, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;

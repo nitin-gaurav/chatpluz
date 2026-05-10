@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-const API_URL = "http://localhost:5000/chat";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/chat";
 const STORAGE_KEY = "ai-support-assistant-conversations";
 const ACTIVE_CONVERSATION_KEY = "ai-support-assistant-active-id";
 const DEFAULT_AI_MESSAGE = {
